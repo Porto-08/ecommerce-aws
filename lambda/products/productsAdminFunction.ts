@@ -1,3 +1,4 @@
+import { Product } from './layers/productsLayer/nodejs/productRepository';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
 import { ProductRepository } from "/opt/nodejs/productsLayer";
@@ -14,16 +15,26 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
 
   const resource = event.resource;
   const method = event.httpMethod;
-  const body = event.body;
+  const product = JSON.parse(event.body!) as Product;
 
   if (resource === '/products') {
+    console.log(`Method: ${method}`);
 
+    try {
+      const createdProduct = await productRepository.createProduct(product);
 
-    return {
-      statusCode: 201,
-      body: JSON.stringify({
-        message: `${method} /products`,
-      }),
+      return {
+        statusCode: 201,
+        body: JSON.stringify(createdProduct),
+      };
+    } catch (error) {
+      console.error((<Error>error).message);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          message: 'Internal Server Error',
+        }),
+      };
     }
   } else if (resource === '/products/{id}') {
     const productId = event.pathParameters?.id as string;
@@ -31,24 +42,39 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
     if (method === 'PUT') {
       console.log(`${method} /products/${productId}`);
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          message: `${method} /products/${productId}`,
-        }),
+      try {
+        const updatedProduct = await productRepository.updateProduct(productId, product);
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify(updatedProduct),
+        }
+      } catch (ConditionCheckFailedException) {
+        return {
+          statusCode: 404,
+          body: `Product with ID ${productId} not found`,
+        };
       }
     } else if (method === 'DELETE') {
       console.log(`${method} /products/${productId}`);
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          message: `${method} /products/${productId}`,
-        }),
+      try {
+        const deletedProduct = await productRepository.deleteProduct(productId);
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify(deletedProduct),
+        };
+      } catch (error) {
+        console.error((<Error>error).message);
+
+        return {
+          statusCode: 404,
+          body: JSON.stringify((<Error>error).message),
+        };
       }
     }
   }
-
 
   return {
     statusCode: 400,
