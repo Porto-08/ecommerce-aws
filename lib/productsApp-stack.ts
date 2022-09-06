@@ -33,8 +33,14 @@ export class ProductsAppStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: false,
-      }
+      },
+      environment: {
+        PRODUCTS_DDB: this.productsDdb.tableName,
+      },
     });
+
+    // Grant the lambda role read access to the DynamoDB table
+    this.productsDdb.grantReadData(this.productsFetchHandler);
   };
 };
 
