@@ -31,6 +31,7 @@ export class EcommerceApiStack extends cdk.Stack {
           user: true,
         }),
       },
+      cloudWatchRole: true
     });
 
     // integrando o lambda com a API Gateway

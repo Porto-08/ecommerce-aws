@@ -8,7 +8,7 @@ import { EcommerceApiStack } from '../lib/ecommerceApi-stack';
 const app = new cdk.App();
 
 const env: cdk.Environment = {
-  account: process.env.DEFAULT_ACCOUNT_ID || '',
+  account: process.env.DEFAULT_ACCOUNT_ID || '631271890638',
   region: process.env.DEFAULT_REGION || 'us-east-1',
 };
 
