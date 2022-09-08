@@ -36,7 +36,8 @@ const productsAppStack = new ProductsAppStack(app, 'ProductsApp', {
   eventsDdbTable: eventsDdbStack.table,
 });
 
-productsAppStack.addDependency(productsAppLayersStack);
+productsAppStack.addDependency(productsAppLayersStack, 'ProductsApp depends on ProductsAppLayers');
+productsAppStack.addDependency(eventsDdbStack, 'EventsDdbStack');
 
 const ecommerceApiStack = new EcommerceApiStack(app, 'EcommerceApi', {
   env,
