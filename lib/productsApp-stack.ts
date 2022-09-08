@@ -6,13 +6,17 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from "aws-cdk-lib/aws-ssm"
 import * as xray from "aws-cdk-lib/aws-xray"
 
+interface ProductsAppStackProps extends cdk.StackProps {
+  eventsDdbTable: dynamodb.Table
+}
+
 export class ProductsAppStack extends cdk.Stack {
   readonly productsFetchHandler: lambdaNodeJs.NodejsFunction
   readonly productsAdminHandler: lambdaNodeJs.NodejsFunction
   readonly productsDdb: dynamodb.Table
 
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: ProductsAppStackProps) {
     super(scope, id, props);
 
     this.productsDdb = new dynamodb.Table(this, 'ProductsDdb', {
@@ -27,10 +31,39 @@ export class ProductsAppStack extends cdk.Stack {
       writeCapacity: 1,
     });
 
-    // Get the layer from the SSM Parameter Store
+    // Products Layer
     const productsLayerArn = ssm.StringParameter.valueForStringParameter(this, 'ProductsLayerVersionArn');
-    const productsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ProductsLayer', productsLayerArn);
+    const productsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ProductsLayerVersionArn', productsLayerArn);
 
+
+    // Products Events Layer
+    const productEventsLayerArn = ssm.StringParameter.valueForStringParameter(this, 'ProductsEventsLayerVersionArn');
+    const productEventsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ProductsEventsLayerVersionArn', productEventsLayerArn);
+
+
+
+    // Events products
+    const productsEventsHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsEventsFunction', {
+      functionName: 'ProductsEventsFunction',
+      entry: 'lambda/products/productsEventsFunction.ts',
+      handler: 'handler',
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(2),
+      bundling: {
+        minify: true,
+        sourceMap: false,
+      },
+      environment: {
+        EVENTS_DDB: props.eventsDdbTable.tableName,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      layers: [productEventsLayer],
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
+    });
+
+    props.eventsDdbTable.grantWriteData(productsEventsHandler);
+
+    // Fetch products
     this.productsFetchHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsFetchFunction', {
       functionName: 'ProductsFetchFunction',
       entry: 'lambda/products/productsFetchFunction.ts',
@@ -52,6 +85,8 @@ export class ProductsAppStack extends cdk.Stack {
     // Grant the lambda role read access to the DynamoDB table
     this.productsDdb.grantReadData(this.productsFetchHandler);
 
+
+    // Admin products
     this.productsAdminHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsAdminFunction', {
       functionName: 'ProductsAdminFunction',
       entry: 'lambda/products/productsAdminFunction.ts',
@@ -64,14 +99,18 @@ export class ProductsAppStack extends cdk.Stack {
       },
       environment: {
         PRODUCTS_DDB: this.productsDdb.tableName,
+        PRODUCTS_EVENTS_FUNCTION_NAME: productsEventsHandler.functionName,
       },
-      layers: [productsLayer],
+      layers: [productsLayer, productEventsLayer],
       tracing: lambda.Tracing.ACTIVE,
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
     // Grant the lambda role write access to the DynamoDB table
     this.productsDdb.grantWriteData(this.productsAdminHandler);
+
+    // Grant the lambda role invoke access to the events lambda
+    productsEventsHandler.grantInvoke(this.productsAdminHandler);
   };
 
 

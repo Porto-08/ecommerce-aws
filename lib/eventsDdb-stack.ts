@@ -28,5 +28,4 @@ export class EventsDdbStack extends cdk.Stack {
       writeCapacity: 1,
     });
   }
-
 }
