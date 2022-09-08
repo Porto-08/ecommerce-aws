@@ -2,10 +2,16 @@ import { Product } from './layers/productsLayer/nodejs/productRepository';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
 import { ProductRepository } from "/opt/nodejs/productsLayer";
+import * as AWSXRay from "aws-xray-sdk";
+
+// Capture all the calls to AWS services 
+AWSXRay.captureAWS(require('aws-sdk'));
 
 const PRODUCTS_DDB = process.env.PRODUCTS_DDB!;
 const ddbClient = new DynamoDB.DocumentClient();
 const productRepository = new ProductRepository(ddbClient, PRODUCTS_DDB);
+
+
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const lambdaRequestID = context.awsRequestId
@@ -24,7 +30,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       const createdProduct = await productRepository.createProduct(product);
 
       return {
-        statusCode: 201,
+        statusCode: 200,
         body: JSON.stringify(createdProduct),
       };
     } catch (error) {

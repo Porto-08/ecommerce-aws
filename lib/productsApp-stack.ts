@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from "aws-cdk-lib/aws-ssm"
+import * as xray from "aws-cdk-lib/aws-xray"
 
 export class ProductsAppStack extends cdk.Stack {
   readonly productsFetchHandler: lambdaNodeJs.NodejsFunction
@@ -44,6 +45,7 @@ export class ProductsAppStack extends cdk.Stack {
         PRODUCTS_DDB: this.productsDdb.tableName,
       },
       layers: [productsLayer],
+      tracing: lambda.Tracing.ACTIVE,
     });
 
     // Grant the lambda role read access to the DynamoDB table
@@ -63,6 +65,7 @@ export class ProductsAppStack extends cdk.Stack {
         PRODUCTS_DDB: this.productsDdb.tableName,
       },
       layers: [productsLayer],
+      tracing: lambda.Tracing.ACTIVE,
     });
 
     // Grant the lambda role write access to the DynamoDB table
