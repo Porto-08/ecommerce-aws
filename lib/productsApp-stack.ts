@@ -46,6 +46,7 @@ export class ProductsAppStack extends cdk.Stack {
       },
       layers: [productsLayer],
       tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
     // Grant the lambda role read access to the DynamoDB table
@@ -66,6 +67,7 @@ export class ProductsAppStack extends cdk.Stack {
       },
       layers: [productsLayer],
       tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
     // Grant the lambda role write access to the DynamoDB table
