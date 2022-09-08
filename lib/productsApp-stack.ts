@@ -73,6 +73,8 @@ export class ProductsAppStack extends cdk.Stack {
     // Grant the lambda role write access to the DynamoDB table
     this.productsDdb.grantWriteData(this.productsAdminHandler);
   };
+
+
 };
 
 
