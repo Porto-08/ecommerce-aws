@@ -32,5 +32,15 @@ export class OrderRepository {
     this.orderDdb = orderDdb;
   }
 
+  async createOrder(order: Order): Promise<Order> {
+    order.sk = uuidv4();
+    order.createdAt = Date.now();
 
+    await this.ddbClient.put({
+      TableName: this.orderDdb,
+      Item: order,
+    }).promise();
+
+    return order;
+  }
 }
