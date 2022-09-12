@@ -16,7 +16,6 @@ const lambdaClient = new Lambda();
 const productRepository = new ProductRepository(ddbClient, productsddb);
 
 
-
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const lambdaRequestID = context.awsRequestId
   const apiRequestID = event.requestContext.requestId
@@ -135,6 +134,6 @@ function sendProductEvent(product: Product, eventType: ProductEventType, email: 
   return lambdaClient.invoke({
     FunctionName: productsEventsFunctionName,
     Payload: JSON.stringify(event),
-    InvocationType: 'RequestResponse',
+    InvocationType: 'Event',
   }).promise();
 }

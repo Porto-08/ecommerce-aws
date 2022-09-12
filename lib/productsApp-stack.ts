@@ -4,7 +4,6 @@ import * as cdk from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from "aws-cdk-lib/aws-ssm"
-import * as xray from "aws-cdk-lib/aws-xray"
 
 interface ProductsAppStackProps extends cdk.StackProps {
   eventsDdbTable: dynamodb.Table
@@ -14,7 +13,6 @@ export class ProductsAppStack extends cdk.Stack {
   readonly productsFetchHandler: lambdaNodeJs.NodejsFunction
   readonly productsAdminHandler: lambdaNodeJs.NodejsFunction
   readonly productsDdb: dynamodb.Table
-
 
   constructor(scope: Construct, id: string, props: ProductsAppStackProps) {
     super(scope, id, props);
@@ -111,8 +109,6 @@ export class ProductsAppStack extends cdk.Stack {
     // Grant the lambda role invoke access to the events lambda
     productsEventsHandler.grantInvoke(this.productsAdminHandler);
   };
-
-
 };
 
 

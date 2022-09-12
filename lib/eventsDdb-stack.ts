@@ -1,8 +1,6 @@
 import * as cdk from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as ssm from "aws-cdk-lib/aws-ssm"
-import * as xray from "aws-cdk-lib/aws-xray"
 
 export class EventsDdbStack extends cdk.Stack {
   readonly table: dynamodb.Table
@@ -27,5 +25,5 @@ export class EventsDdbStack extends cdk.Stack {
       readCapacity: 1,
       writeCapacity: 1,
     });
-  }
-}
+  };
+};

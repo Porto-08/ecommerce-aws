@@ -31,5 +31,5 @@ export class ProductsAppLayersStack extends cdk.Stack {
       parameterName: 'ProductsEventsLayerVersionArn',
       stringValue: productEventsLayer.layerVersionArn,
     });
-  }
-}
+  };
+};
