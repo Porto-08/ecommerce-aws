@@ -62,5 +62,17 @@ export class OrderRepository {
     }).promise();
 
     return data.Items as Order[];
+  };
+
+  async getOrder(email: string, orderId: string): Promise<Order> {
+    const data = await this.ddbClient.get({
+      TableName: this.orderDdb,
+      Key: {
+        pk: email,
+        sk: orderId,
+      },
+    }).promise();
+
+    return data.Item as Order;
   }
 }
