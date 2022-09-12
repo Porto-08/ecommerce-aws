@@ -42,5 +42,13 @@ export class OrderRepository {
     }).promise();
 
     return order;
+  };
+
+  async getAllOrders(): Promise<Order[]> {
+    const result = await this.ddbClient.scan({
+      TableName: this.orderDdb,
+    }).promise();
+
+    return result.Items as Order[];
   }
 }
