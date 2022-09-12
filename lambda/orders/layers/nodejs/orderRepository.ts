@@ -45,10 +45,22 @@ export class OrderRepository {
   };
 
   async getAllOrders(): Promise<Order[]> {
-    const result = await this.ddbClient.scan({
+    const data = await this.ddbClient.scan({
       TableName: this.orderDdb,
     }).promise();
 
-    return result.Items as Order[];
+    return data.Items as Order[];
+  }
+
+  async getOrdersByEmail(email: string): Promise<Order[]> {
+    const data = await this.ddbClient.query({
+      TableName: this.orderDdb,
+      KeyConditionExpression: 'pk = :email',
+      ExpressionAttributeValues: {
+        ':email': email,
+      },
+    }).promise();
+
+    return data.Items as Order[];
   }
 }
