@@ -4,7 +4,6 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ssm from "aws-cdk-lib/aws-ssm"
 
 export class ProductsAppLayersStack extends cdk.Stack {
-
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -28,7 +27,6 @@ export class ProductsAppLayersStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
-    // Add the layer to the SSM Parameter Store
     new ssm.StringParameter(this, 'ProductsEventsLayerVersionArn', {
       parameterName: 'ProductsEventsLayerVersionArn',
       stringValue: productEventsLayer.layerVersionArn,

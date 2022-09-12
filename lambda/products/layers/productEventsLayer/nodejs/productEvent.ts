@@ -1,7 +1,7 @@
 export enum ProductEventType {
-  Created = 'PRODUCT_CREATED',
-  Updated = 'PRODUCT_UPDATED',
-  Deleted = 'PRODUCT_DELETED',
+  CREATED = 'PRODUCT_CREATED',
+  UPDATED = 'PRODUCT_UPDATED',
+  DELETED = 'PRODUCT_DELETED',
 };
 
 export interface ProductEvent {

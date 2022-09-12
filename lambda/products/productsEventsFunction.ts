@@ -8,9 +8,6 @@ AWSXRay.captureAWS(require('aws-sdk'));
 const eventsDdb = process.env.EVENTS_DDB!;
 const ddbClient = new DynamoDB.DocumentClient();
 
-
-
-
 export const handler = async (event: ProductEvent, context: Context, callback: Callback): Promise<void> => {
   // Todo: to be removed
   console.log('Event: ', event);
@@ -27,7 +24,7 @@ export const handler = async (event: ProductEvent, context: Context, callback: C
 
 function createEvent(event: ProductEvent) {
   const timestamp = Date.now();
-  const ttl = Math.round(timestamp / 1000 + 5 * 60); // 5 minutes ahead
+  const ttl = Math.round(timestamp / 1000 + 5 + 60); // 5 minutes ahead
 
   return ddbClient.put({
     TableName: eventsDdb,
@@ -45,5 +42,4 @@ function createEvent(event: ProductEvent) {
       ttl
     }
   }).promise();
-
 }

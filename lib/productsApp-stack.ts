@@ -19,6 +19,7 @@ export class ProductsAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ProductsAppStackProps) {
     super(scope, id, props);
 
+    // Create a DynamoDB table
     this.productsDdb = new dynamodb.Table(this, 'ProductsDdb', {
       tableName: 'products',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -39,8 +40,6 @@ export class ProductsAppStack extends cdk.Stack {
     // Products Events Layer
     const productEventsLayerArn = ssm.StringParameter.valueForStringParameter(this, 'ProductsEventsLayerVersionArn');
     const productEventsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ProductsEventsLayerVersionArn', productEventsLayerArn);
-
-
 
     // Events products
     const productsEventsHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsEventsFunction', {
@@ -63,7 +62,7 @@ export class ProductsAppStack extends cdk.Stack {
 
     props.eventsDdbTable.grantWriteData(productsEventsHandler);
 
-    // Fetch products
+    // Lambda Fetch products
     this.productsFetchHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsFetchFunction', {
       functionName: 'ProductsFetchFunction',
       entry: 'lambda/products/productsFetchFunction.ts',
@@ -86,7 +85,7 @@ export class ProductsAppStack extends cdk.Stack {
     this.productsDdb.grantReadData(this.productsFetchHandler);
 
 
-    // Admin products
+    // lambda Admin products
     this.productsAdminHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsAdminFunction', {
       functionName: 'ProductsAdminFunction',
       entry: 'lambda/products/productsAdminFunction.ts',

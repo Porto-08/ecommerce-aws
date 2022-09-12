@@ -55,8 +55,8 @@ export class ProductRepository {
       },
     };
 
-    const data = await this.ddbClient.put(params).promise();
-    return data.$response.data as Product;
+    await this.ddbClient.put(params).promise();
+    return product;
   }
 
   async updateProduct(productId: string, product: Product): Promise<Product> {
