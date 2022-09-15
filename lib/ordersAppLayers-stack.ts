@@ -32,5 +32,18 @@ export class OrdersAppLayersStack extends cdk.Stack {
       parameterName: 'OrdersApiLayerVersionArn',
       stringValue: ordersApiLayer.layerVersionArn,
     });
+
+    const ordersEventsLayer = new lambda.LayerVersion(this, 'OrdersEventsLayer', {
+      code: lambda.Code.fromAsset('lambda/orders/layers/ordersEventsLayer'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
+      description: 'OrdersEventsLayer',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Add the layer to the SSM Parameter Store
+    new ssm.StringParameter(this, 'OrdersEventsLayerVersionArn', {
+      parameterName: 'OrdersEventsLayerVersionArn',
+      stringValue: ordersEventsLayer.layerVersionArn,
+    });
   };
 };
