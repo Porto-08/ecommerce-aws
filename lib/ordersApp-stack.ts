@@ -40,7 +40,12 @@ export class OrdersAppStack extends cdk.Stack {
     const ordersLayerArn = ssm.StringParameter.valueForStringParameter(this, 'OrdersLayerVersionArn');
     const ordersLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OrdersLayerVersionArn ', ordersLayerArn);
 
-    // Orders Admin Handler
+    // Orders API Layer
+    const ordersApiLayerArn = ssm.StringParameter.valueForStringParameter(this, 'OrdersApiLayerVersionArn');
+    const ordersApiLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OrdersApiLayerVersionArn ', ordersApiLayerArn);
+
+
+    // Orders Handler
     this.ordersHandler = new lambdaNodeJs.NodejsFunction(this, 'OrdersFunction', {
       functionName: 'OrdersFunction',
       entry: 'lambda/orders/ordersFunction.ts',
@@ -56,7 +61,7 @@ export class OrdersAppStack extends cdk.Stack {
         PRODUCTS_DDB: props.productsDdb.tableName,
       },
       tracing: lambda.Tracing.ACTIVE,
-      layers: [ordersLayer, productsLayer],
+      layers: [ordersLayer, productsLayer, ordersApiLayer],
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 

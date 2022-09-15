@@ -10,7 +10,6 @@ export interface OrderProduct {
 export interface Order {
   pk: string;
   sk?: string;
-  email: string;
   createdAt?: number;
   shipping: {
     type: "URGENT" | "ECONOMIC";
