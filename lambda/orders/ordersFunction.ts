@@ -1,16 +1,20 @@
+import { DynamoDB, SNS } from 'aws-sdk';
 import { CarrierType, PaymentType, ShippingType } from './layers/ordersApiLayer/nodejs/ordersApi';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { Product, ProductRepository } from '/opt/nodejs/productsLayer';
-import { Order, OrderProduct, OrderRepository } from '/opt/nodejs/ordersLayer';
-import { DynamoDB } from 'aws-sdk';
-import * as AWSRay from 'aws-xray-sdk';
+import { Order, OrderRepository } from '/opt/nodejs/ordersLayer';
 import { OrderProductRespose, OrderRequest, OrderResponse } from '/opt/nodejs/ordersApiLayer';
+import { OrderEvent, OrderEventType, Envelope } from '/opt/nodejs/ordersEventsLayer';
+import * as AWSRay from 'aws-xray-sdk';
 
 AWSRay.captureAWS(require('aws-sdk'));
 
 const ordersDdb = process.env.ORDERS_DDB!;
 const productsDdb = process.env.PRODUCTS_DDB!;
+const orderEventsTopicArn = process.env.ORDER_EVENTS_TOPIC_ARN!;
+
 const ddbClient = new DynamoDB.DocumentClient();
+const snsClient = new SNS();
 
 const orderRepository = new OrderRepository(ddbClient, ordersDdb);
 const productRepository = new ProductRepository(ddbClient, productsDdb);
@@ -21,8 +25,6 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
   const lambdaRequestId = context.awsRequestId;
 
   console.log(`API Request: ${apiRequest} - Lambda Request: ${lambdaRequestId}`);
-
-
 
   if (method === 'GET') {
     console.log('GET /orders');
@@ -80,6 +82,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
     const order = buildOrder(orderRequest, products);
     const orderCreated = await orderRepository.createOrder(order);
 
+    const eventResult = await sendOrderEvent(orderCreated, OrderEventType.CREATED, lambdaRequestId);
+
+    console.log(`Order created event sent - OrderId: ${order.sk} - MessageId: ${eventResult.MessageId}`);
+
     return {
       statusCode: 201,
       body: JSON.stringify(converToOrderResponse(orderCreated)),
@@ -93,6 +99,10 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
 
     try {
       const orderDeleted = await orderRepository.deleteOrder(email, orderId);
+
+      const eventResult = await sendOrderEvent(orderDeleted, OrderEventType.DELETED, lambdaRequestId);
+
+      console.log(`Order deleted event sent - OrderId: ${orderDeleted.sk} - MessageId: ${eventResult.MessageId}`);
 
       return {
         statusCode: 200,
@@ -114,6 +124,30 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       message: 'Bad Request',
     }),
   }
+}
+
+function sendOrderEvent(order: Order, eventType: OrderEventType, lambdaRequestId: string) {
+  const productCodes = order.products.map((product) => product.code);
+
+
+  const orderEvent: OrderEvent = {
+    productCodes,
+    email: order.pk,
+    orderId: order.sk!,
+    billing: order.billing,
+    shipping: order.shipping,
+    requesId: lambdaRequestId,
+  }
+
+  const evenlope: Envelope = {
+    eventType: eventType,
+    data: JSON.stringify(orderEvent),
+  }
+
+  return snsClient.publish({
+    TopicArn: orderEventsTopicArn,
+    Message: JSON.stringify(evenlope)
+  }).promise();
 }
 
 function converToOrderResponse(order: Order): OrderResponse {
