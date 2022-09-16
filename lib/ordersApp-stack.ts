@@ -48,8 +48,13 @@ export class OrdersAppStack extends cdk.Stack {
     const ordersApiLayerArn = ssm.StringParameter.valueForStringParameter(this, 'OrdersApiLayerVersionArn');
     const ordersApiLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OrdersApiLayerVersionArn ', ordersApiLayerArn);
 
+    // Orders Events Layer
     const ordersEventsLayerArn = ssm.StringParameter.valueForStringParameter(this, 'OrdersEventsLayerVersionArn');
     const ordersEventsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OrdersEventsLayerVersionArn ', ordersEventsLayerArn);
+
+    // Orders Repository Layer
+    const ordersEventsRepositoryLayerArn = ssm.StringParameter.valueForStringParameter(this, 'OrdersEventsRepositoryLayerArn');
+    const ordersEventsRepositoryLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'OrdersEventsRepositoryLayerArn ', ordersEventsRepositoryLayerArn);
 
 
     const ordersTopic = new sns.Topic(this, 'OrdersTopic', {
@@ -102,7 +107,7 @@ export class OrdersAppStack extends cdk.Stack {
         EVENTS_DDB: props.eventsDdb.tableName,
       },
       tracing: lambda.Tracing.ACTIVE,
-      layers: [ordersEventsLayer],
+      layers: [ordersEventsRepositoryLayer],
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
