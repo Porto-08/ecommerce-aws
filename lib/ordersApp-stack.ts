@@ -1,15 +1,17 @@
+import { Construct } from 'constructs'
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as cdk from 'aws-cdk-lib'
-import { Construct } from 'constructs'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from "aws-cdk-lib/aws-ssm"
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 
 interface OrdersAppStackProps extends cdk.StackProps {
-  productsDdb: dynamodb.Table
+  productsDdb: dynamodb.Table;
+  eventsDdb: dynamodb.Table;
 }
 
 export class OrdersAppStack extends cdk.Stack {
@@ -83,5 +85,41 @@ export class OrdersAppStack extends cdk.Stack {
 
     // Grant permissions to the Orders Lambda to publish to the Orders Topic
     ordersTopic.grantPublish(this.ordersHandler);
+
+
+    // Orders Events Handler
+    const ordersEventsHandler = new lambdaNodeJs.NodejsFunction(this, 'OrdersEventsFunction', {
+      functionName: 'OrdersEventsFunction',
+      entry: 'lambda/orders/ordersEventsFunction.ts',
+      handler: 'handler',
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(2),
+      bundling: {
+        minify: true,
+        sourceMap: false,
+      },
+      environment: {
+        EVENTS_DDB: props.eventsDdb.tableName,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      layers: [ordersEventsLayer],
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
+    });
+
+    ordersTopic.addSubscription(new subscriptions.LambdaSubscription(ordersEventsHandler));
+
+    // Grant permissions to the Orders Events Lambda to write to the Events DDB
+    const eventsDdbPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['dynamodb:PutItem'],
+      resources: [props.eventsDdb.tableArn],
+      conditions: {
+        ['ForAllValues:StringLike']: {
+          'dynamodb:LeadingKeys': ['#order_*'],
+        },
+      },
+    });
+
+    ordersEventsHandler.addToRolePolicy(eventsDdbPolicy);
   };
 };
