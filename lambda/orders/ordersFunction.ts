@@ -1,77 +1,209 @@
-import { Context, Callback, APIGatewayProxyResult } from 'aws-lambda';
-import { APIGatewayProxyEvent } from 'aws-lambda';
-import { OrderRepository } from './layers/nodejs/orderRepository';
-import { DynamoDB } from "aws-sdk";
-import { ProductRepository } from "/opt/nodejs/productsLayer";
-import * as AWSXRay from "aws-xray-sdk";
+import { DynamoDB, SNS } from 'aws-sdk';
+import { CarrierType, PaymentType, ShippingType } from './layers/ordersApiLayer/nodejs/ordersApi';
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { Product, ProductRepository } from '/opt/nodejs/productsLayer';
+import { Order, OrderRepository } from '/opt/nodejs/ordersLayer';
+import { OrderProductRespose, OrderRequest, OrderResponse } from '/opt/nodejs/ordersApiLayer';
+import { OrderEvent, OrderEventType, Envelope } from '/opt/nodejs/ordersEventsLayer';
+import * as AWSRay from 'aws-xray-sdk';
 
-AWSXRay.captureAWS(require("aws-sdk"));
+AWSRay.captureAWS(require('aws-sdk'));
 
 const ordersDdb = process.env.ORDERS_DDB!;
 const productsDdb = process.env.PRODUCTS_DDB!;
+const orderEventsTopicArn = process.env.ORDER_EVENTS_TOPIC_ARN!;
 
 const ddbClient = new DynamoDB.DocumentClient();
+const snsClient = new SNS();
 
-const productRepository = new ProductRepository(ddbClient, productsDdb);
 const orderRepository = new OrderRepository(ddbClient, ordersDdb);
+const productRepository = new ProductRepository(ddbClient, productsDdb);
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   const method = event.httpMethod;
-  const apiRequestId = event.requestContext.requestId;
-  const lambdaRequestID = context.awsRequestId;
+  const apiRequest = event.requestContext.requestId;
+  const lambdaRequestId = context.awsRequestId;
 
-  console.log(`API Request ID: ${apiRequestId} - Lambda Request ID: ${lambdaRequestID}`);
+  console.log(`API Request: ${apiRequest} - Lambda Request: ${lambdaRequestId}`);
 
   if (method === 'GET') {
+    console.log('GET /orders');
     if (event.queryStringParameters) {
       const email = event.queryStringParameters!.email;
       const orderId = event.queryStringParameters!.orderId;
 
-
       if (email && orderId) {
-        const order = await orderRepository.getOrder(email, orderId);
-        return {
-          statusCode: 200,
-          body: JSON.stringify(order),
-        };
-      }
 
-      if (email) {
+        try {
+          const order = await orderRepository.getOrder(email, orderId);
+
+          return {
+            statusCode: 200,
+            body: JSON.stringify(converToOrderResponse(order)),
+          }
+        } catch (error) {
+          console.log((<Error>error).message);
+          return {
+            statusCode: 404,
+            body: (<Error>error).message,
+          }
+        }
+
+      } else if (email) {
         const orders = await orderRepository.getOrdersByEmail(email);
+
         return {
           statusCode: 200,
-          body: JSON.stringify(orders),
-        };
-      }
-    }
-    else {
-      const orders = await orderRepository.getAllOrders();
-      return {
-        statusCode: 200,
-        body: JSON.stringify(orders),
+          body: JSON.stringify(orders.map(converToOrderResponse)),
+        }
       };
-    }
-
-  } else if (method === 'POST') {
-    console.log('POST');
-  } else if (method === 'DELETE') {
-    console.log('DELETE');
-
-    const email = event.queryStringParameters!.email!;
-    const order = event.queryStringParameters!.orderId!;
-
-    const deletedOrder = await orderRepository.deleteOrder(email, order);
+    };
+    const orders = await orderRepository.getAllOrders();
 
     return {
       statusCode: 200,
-      body: JSON.stringify(deletedOrder),
+      body: JSON.stringify(orders.map(converToOrderResponse)),
     }
-  }
+  } else if (method === 'POST') {
+    console.log('POST /orders');
+
+    const orderRequest = JSON.parse(event.body!) as OrderRequest;
+    const products = await productRepository.getProductsByIds(orderRequest.productIds);
+
+    if (products.length !== orderRequest.productIds.length) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          message: 'Some products were not found',
+        }),
+      };
+    }
+
+    const order = buildOrder(orderRequest, products);
+    const orderCreated = await orderRepository.createOrder(order);
+
+    const eventResult = await sendOrderEvent(orderCreated, OrderEventType.CREATED, lambdaRequestId);
+
+    console.log(`Order created event sent - OrderId: ${order.sk} - MessageId: ${eventResult.MessageId}`);
+
+    return {
+      statusCode: 201,
+      body: JSON.stringify(converToOrderResponse(orderCreated)),
+    }
+  } else if (method === 'DELETE') {
+    console.log('DELETE /orders');
+
+
+    const email = event.queryStringParameters!.email!;
+    const orderId = event.queryStringParameters!.orderId!;
+
+    try {
+      const orderDeleted = await orderRepository.deleteOrder(email, orderId);
+
+      const eventResult = await sendOrderEvent(orderDeleted, OrderEventType.DELETED, lambdaRequestId);
+
+      console.log(`Order deleted event sent - OrderId: ${orderDeleted.sk} - MessageId: ${eventResult.MessageId}`);
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify(converToOrderResponse(orderDeleted)),
+      }
+    } catch (error) {
+      console.log((<Error>error).message);
+      return {
+        statusCode: 404,
+        body: (<Error>error).message,
+      }
+    }
+  };
+
 
   return {
     statusCode: 400,
     body: JSON.stringify({
-      message: 'Invalid HTTP Method',
+      message: 'Bad Request',
     }),
   }
+}
+
+function sendOrderEvent(order: Order, eventType: OrderEventType, lambdaRequestId: string) {
+  const productCodes = order.products.map((product) => product.code);
+
+
+  const orderEvent: OrderEvent = {
+    productCodes,
+    email: order.pk,
+    orderId: order.sk!,
+    billing: order.billing,
+    shipping: order.shipping,
+    requesId: lambdaRequestId,
+  }
+
+  const evenlope: Envelope = {
+    eventType: eventType,
+    data: JSON.stringify(orderEvent),
+  }
+
+  return snsClient.publish({
+    TopicArn: orderEventsTopicArn,
+    Message: JSON.stringify(evenlope)
+  }).promise();
+}
+
+function converToOrderResponse(order: Order): OrderResponse {
+  const orderProducts: OrderProductRespose[] = [];
+
+  order.products.forEach((product) => {
+    orderProducts.push({
+      code: product.code,
+      price: product.price,
+    });
+  });
+
+  const orderResponse: OrderResponse = {
+    email: order.pk,
+    id: order.sk!,
+    createdAt: order.createdAt!,
+    products: orderProducts,
+    billing: {
+      payment: order.billing.payment as PaymentType,
+      totalPrice: order.billing.totalPrice,
+    },
+    shipping: {
+      carrier: order.shipping.carrier as CarrierType,
+      type: order.shipping.type as ShippingType,
+    },
+  };
+
+  return orderResponse;
+}
+
+function buildOrder(orderRequest: OrderRequest, products: Product[]): Order {
+
+  const orderProducts: OrderProductRespose[] = [];
+  let totalPrice = 0;
+
+  products.forEach((product) => {
+    orderProducts.push({
+      code: product.code,
+      price: product.price,
+    });
+
+    totalPrice += product.price;
+  })
+
+  const order: Order = {
+    pk: orderRequest.email,
+    billing: {
+      payment: orderRequest.payment,
+      totalPrice: totalPrice,
+    },
+    shipping: {
+      carrier: orderRequest.shipping.carrier,
+      type: orderRequest.shipping.type,
+    },
+    products: orderProducts,
+  }
+
+  return order;
 }

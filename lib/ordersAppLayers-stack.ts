@@ -19,5 +19,44 @@ export class OrdersAppLayersStack extends cdk.Stack {
       parameterName: 'OrdersLayerVersionArn',
       stringValue: ordersLayer.layerVersionArn,
     });
+
+    const ordersApiLayer = new lambda.LayerVersion(this, 'OrdersApiLayer', {
+      code: lambda.Code.fromAsset('lambda/orders/layers/ordersApiLayer'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
+      description: 'OrdersApiLayer',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Add the layer to the SSM Parameter Store
+    new ssm.StringParameter(this, 'OrdersApiLayerVersionArn', {
+      parameterName: 'OrdersApiLayerVersionArn',
+      stringValue: ordersApiLayer.layerVersionArn,
+    });
+
+    const ordersEventsLayer = new lambda.LayerVersion(this, 'OrdersEventsLayer', {
+      code: lambda.Code.fromAsset('lambda/orders/layers/ordersEventsLayer'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
+      description: 'OrdersEventsLayer',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Add the layer to the SSM Parameter Store
+    new ssm.StringParameter(this, 'OrdersEventsLayerVersionArn', {
+      parameterName: 'OrdersEventsLayerVersionArn',
+      stringValue: ordersEventsLayer.layerVersionArn,
+    });
+
+    const ordersEventsRepositoryLayer = new lambda.LayerVersion(this, 'OrdersEventsRepositoryLayer', {
+      code: lambda.Code.fromAsset('lambda/orders/layers/ordersEventsRepositoryLayer'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
+      description: 'OrdersEventsRepositoryLayer',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // Add the layer to the SSM Parameter Store
+    new ssm.StringParameter(this, 'OrdersEventsRepositoryLayerArn', {
+      parameterName: 'OrdersEventsRepositoryLayerArn',
+      stringValue: ordersEventsRepositoryLayer.layerVersionArn,
+    });
   };
 };

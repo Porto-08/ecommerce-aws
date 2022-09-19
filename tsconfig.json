@@ -28,6 +28,15 @@
       ],
       "/opt/nodejs/ordersLayer": [
         "lambda/orders/layers/ordersLayer/nodejs/orderRepository"
+      ],
+      "/opt/nodejs/ordersApiLayer": [
+        "lambda/orders/layers/ordersApiLayer/nodejs/ordersApi"
+      ],
+      "/opt/nodejs/ordersEventsLayer": [
+        "lambda/orders/layers/ordersEventsLayer/nodejs/orderEvents"
+      ],
+      "/opt/nodejs/ordersEventsRepositoryLayer": [
+        "lambda/orders/layers/ordersEventsRepositoryLayer/nodejs/orderEventRepository"
       ]
     }
   },
