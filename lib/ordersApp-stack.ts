@@ -7,6 +7,8 @@ import * as ssm from "aws-cdk-lib/aws-ssm"
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
 
 interface OrdersAppStackProps extends cdk.StackProps {
@@ -151,5 +153,32 @@ export class OrdersAppStack extends cdk.Stack {
         })
       },
     }));
+
+    // SQS Queue
+    const ordersEventsQueue = new sqs.Queue(this, 'OrdersEventsQueue', {
+      queueName: 'order-events',
+    });
+
+    // RECEIVING MESSAGES 
+    ordersTopic.addSubscription(new subscriptions.SqsSubscription(ordersEventsQueue));
+
+    const orderEmailsHandler = new lambdaNodeJs.NodejsFunction(this, 'OrderEmailsFunction', {
+      functionName: 'OrderEmailsFunction',
+      entry: 'lambda/orders/orderEmailsFunction.ts',
+      handler: 'handler',
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(2),
+      bundling: {
+        minify: true,
+        sourceMap: false,
+      },
+      layers: [ordersEventsLayer],
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
+    });
+
+    // Order Emails Handler receives messages from the Queue
+    orderEmailsHandler.addEventSource(new lambdaEventSources.SqsEventSource(ordersEventsQueue));
+    ordersEventsQueue.grantConsumeMessages(orderEmailsHandler);
   };
 };
