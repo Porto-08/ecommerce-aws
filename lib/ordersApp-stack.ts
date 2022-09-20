@@ -88,7 +88,7 @@ export class OrdersAppStack extends cdk.Stack {
     // Grant permissions to the Orders Lambda to read from the Products DDB
     props.productsDdb.grantReadData(this.ordersHandler);
 
-    // Grant permissions to the Orders Lambda to publish to the Orders Topic
+    // Grant permissions to the Orders Lambda to publish to the Orders Topic - SENDING MESSAGES
     ordersTopic.grantPublish(this.ordersHandler);
 
 
@@ -111,6 +111,7 @@ export class OrdersAppStack extends cdk.Stack {
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
+    // Subscribe the Orders Events Lambda to the Orders Topic - RECEIVING MESSAGES
     ordersTopic.addSubscription(new subscriptions.LambdaSubscription(ordersEventsHandler));
 
     // Grant permissions to the Orders Events Lambda to write to the Events DDB

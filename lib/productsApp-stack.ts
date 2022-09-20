@@ -4,6 +4,8 @@ import * as cdk from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from "aws-cdk-lib/aws-ssm"
+import * as iam from 'aws-cdk-lib/aws-iam';
+
 
 interface ProductsAppStackProps extends cdk.StackProps {
   eventsDdbTable: dynamodb.Table
@@ -58,7 +60,19 @@ export class ProductsAppStack extends cdk.Stack {
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
-    props.eventsDdbTable.grantWriteData(productsEventsHandler);
+    // Grant permissions to the Products Events Lambda to write to the Events DDB
+    const eventsDdbPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['dynamodb:PutItem'],
+      resources: [props.eventsDdbTable.tableArn],
+      conditions: {
+        ['ForAllValues:StringLike']: {
+          'dynamodb:LeadingKeys': ['#product_*'],
+        },
+      },
+    });
+
+    productsEventsHandler.addToRolePolicy(eventsDdbPolicy);
 
     // Lambda Fetch products
     this.productsFetchHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsFetchFunction', {
@@ -83,6 +97,8 @@ export class ProductsAppStack extends cdk.Stack {
     this.productsDdb.grantReadData(this.productsFetchHandler);
 
 
+
+
     // lambda Admin products
     this.productsAdminHandler = new lambdaNodeJs.NodejsFunction(this, 'ProductsAdminFunction', {
       functionName: 'ProductsAdminFunction',
@@ -105,6 +121,8 @@ export class ProductsAppStack extends cdk.Stack {
 
     // Grant the lambda role write access to the DynamoDB table
     this.productsDdb.grantWriteData(this.productsAdminHandler);
+
+
 
     // Grant the lambda role invoke access to the events lambda
     productsEventsHandler.grantInvoke(this.productsAdminHandler);

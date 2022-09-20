@@ -5,6 +5,7 @@ import { Product, ProductRepository } from '/opt/nodejs/productsLayer';
 import { Order, OrderRepository } from '/opt/nodejs/ordersLayer';
 import { OrderProductRespose, OrderRequest, OrderResponse } from '/opt/nodejs/ordersApiLayer';
 import { OrderEvent, OrderEventType, Envelope } from '/opt/nodejs/ordersEventsLayer';
+import { v4 as uuidv4 } from "uuid";
 import * as AWSRay from 'aws-xray-sdk';
 
 AWSRay.captureAWS(require('aws-sdk'));
@@ -80,16 +81,17 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
     }
 
     const order = buildOrder(orderRequest, products);
-    const orderCreated = await orderRepository.createOrder(order);
+    const orderCreatedPromisse = orderRepository.createOrder(order);
+    const eventResultPromisse = sendOrderEvent(order, OrderEventType.CREATED, lambdaRequestId);
 
-    const eventResult = await sendOrderEvent(orderCreated, OrderEventType.CREATED, lambdaRequestId);
+    const results = await Promise.all([orderCreatedPromisse, eventResultPromisse]);
 
-    console.log(`Order created event sent - OrderId: ${order.sk} - MessageId: ${eventResult.MessageId}`);
+    console.log(`Order created event sent - OrderId: ${order.sk} - MessageId: ${results[1].MessageId}`);
 
     return {
       statusCode: 201,
-      body: JSON.stringify(converToOrderResponse(orderCreated)),
-    }
+      body: JSON.stringify(converToOrderResponse(order)),
+    };
   } else if (method === 'DELETE') {
     console.log('DELETE /orders');
 
@@ -194,6 +196,8 @@ function buildOrder(orderRequest: OrderRequest, products: Product[]): Order {
 
   const order: Order = {
     pk: orderRequest.email,
+    sk: uuidv4(),
+    createdAt: Date.now(),
     billing: {
       payment: orderRequest.payment,
       totalPrice: totalPrice,
