@@ -148,7 +148,13 @@ function sendOrderEvent(order: Order, eventType: OrderEventType, lambdaRequestId
 
   return snsClient.publish({
     TopicArn: orderEventsTopicArn,
-    Message: JSON.stringify(evenlope)
+    Message: JSON.stringify(evenlope),
+    MessageAttributes: {
+      eventType: {
+        DataType: 'String',
+        StringValue: eventType,
+      },
+    },
   }).promise();
 }
 

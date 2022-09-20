@@ -127,5 +127,29 @@ export class OrdersAppStack extends cdk.Stack {
     });
 
     ordersEventsHandler.addToRolePolicy(eventsDdbPolicy);
+
+
+    const billingHandler = new lambdaNodeJs.NodejsFunction(this, 'BillingFunction', {
+      functionName: 'BillingFunction',
+      entry: 'lambda/orders/billingFunction.ts',
+      handler: 'handler',
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(2),
+      bundling: {
+        minify: true,
+        sourceMap: false,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
+    });
+
+    // Subscribe the Orders Events Lambda to the Orders Topic - RECEIVING MESSAGES
+    ordersTopic.addSubscription(new subscriptions.LambdaSubscription(billingHandler, {
+      filterPolicy: {
+        eventType: sns.SubscriptionFilter.stringFilter({
+          allowlist: ['ORDER_CREATED'],
+        })
+      },
+    }));
   };
 };
