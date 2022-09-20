@@ -145,13 +145,15 @@ export class OrdersAppStack extends cdk.Stack {
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
 
+    const orderFilterPolicy = {
+      eventType: sns.SubscriptionFilter.stringFilter({
+        allowlist: ['ORDER_CREATED'],
+      })
+    };
+
     // Subscribe the Orders Events Lambda to the Orders Topic - RECEIVING MESSAGES
     ordersTopic.addSubscription(new subscriptions.LambdaSubscription(billingHandler, {
-      filterPolicy: {
-        eventType: sns.SubscriptionFilter.stringFilter({
-          allowlist: ['ORDER_CREATED'],
-        })
-      },
+      filterPolicy: orderFilterPolicy,
     }));
 
     // SQS Queue
@@ -160,7 +162,9 @@ export class OrdersAppStack extends cdk.Stack {
     });
 
     // RECEIVING MESSAGES 
-    ordersTopic.addSubscription(new subscriptions.SqsSubscription(ordersEventsQueue));
+    ordersTopic.addSubscription(new subscriptions.SqsSubscription(ordersEventsQueue, {
+      filterPolicy: orderFilterPolicy,
+    }));
 
     const orderEmailsHandler = new lambdaNodeJs.NodejsFunction(this, 'OrderEmailsFunction', {
       functionName: 'OrderEmailsFunction',
@@ -178,7 +182,13 @@ export class OrdersAppStack extends cdk.Stack {
     });
 
     // Order Emails Handler receives messages from the Queue
-    orderEmailsHandler.addEventSource(new lambdaEventSources.SqsEventSource(ordersEventsQueue));
+    orderEmailsHandler.addEventSource(new lambdaEventSources.SqsEventSource(ordersEventsQueue, {
+      batchSize: 5,
+      enabled: true,
+      maxBatchingWindow: cdk.Duration.minutes(1),
+    }));
+
     ordersEventsQueue.grantConsumeMessages(orderEmailsHandler);
+
   };
 };
