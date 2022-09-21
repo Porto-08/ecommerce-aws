@@ -156,9 +156,19 @@ export class OrdersAppStack extends cdk.Stack {
       filterPolicy: orderFilterPolicy,
     }));
 
+    // DLQ 
+    const orderEventsDlq = new sqs.Queue(this, 'OrderEventsDlq', {
+      queueName: 'order-events-dlq',
+      retentionPeriod: cdk.Duration.days(10),
+    });
+
     // SQS Queue
     const ordersEventsQueue = new sqs.Queue(this, 'OrdersEventsQueue', {
       queueName: 'order-events',
+      deadLetterQueue: {
+        maxReceiveCount: 3,
+        queue: orderEventsDlq,
+      }
     });
 
     // RECEIVING MESSAGES 
@@ -182,11 +192,11 @@ export class OrdersAppStack extends cdk.Stack {
     });
 
     // Order Emails Handler receives messages from the Queue
-    orderEmailsHandler.addEventSource(new lambdaEventSources.SqsEventSource(ordersEventsQueue, {
+    orderEmailsHandler.addEventSource(new lambdaEventSources.SqsEventSource(ordersEventsQueue, /*{
       batchSize: 5,
       enabled: true,
       maxBatchingWindow: cdk.Duration.minutes(1),
-    }));
+    }*/));
 
     ordersEventsQueue.grantConsumeMessages(orderEmailsHandler);
 
