@@ -17,7 +17,7 @@ export interface Order {
     payment: "CASH" | "CREDIT_CARD" | "DEBIT_CARD";
     totalPrice: number;
   }
-  products: OrderProduct[];
+  products?: OrderProduct[];
 };
 
 export class OrderRepository {
@@ -41,6 +41,7 @@ export class OrderRepository {
   async getAllOrders(): Promise<Order[]> {
     const data = await this.ddbClient.scan({
       TableName: this.orderDdb,
+      ProjectionExpression: 'pk, sk, createdAt, shipping, billing',
     }).promise();
 
     return data.Items as Order[];
@@ -53,6 +54,7 @@ export class OrderRepository {
       ExpressionAttributeValues: {
         ':email': email,
       },
+      ProjectionExpression: 'pk, sk, createdAt, shipping, billing',
     }).promise();
 
     return data.Items as Order[];
