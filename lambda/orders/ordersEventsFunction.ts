@@ -22,7 +22,7 @@ export async function handler(event: SNSEvent, context: Context): Promise<void> 
   await Promise.all(promisses);
 
   return
-}
+};
 
 function createEvent(body: SNSMessage) {
   const envelope = JSON.parse(body.Message) as Envelope;
@@ -52,4 +52,4 @@ function createEvent(body: SNSMessage) {
   };
 
   return orderEventsRepository.createOrderEvent(orderEventDdb)
-}
+};
