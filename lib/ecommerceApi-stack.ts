@@ -8,6 +8,7 @@ interface EcommerceApiStackProps extends cdk.StackProps {
   productsFetchHandler: lambdaNodeJs.NodejsFunction
   productsAdminHandler: lambdaNodeJs.NodejsFunction
   ordersHandler: lambdaNodeJs.NodejsFunction
+  ordersEventsFetchHandler: lambdaNodeJs.NodejsFunction
 }
 
 export class EcommerceApiStack extends cdk.Stack {
@@ -111,6 +112,27 @@ export class EcommerceApiStack extends cdk.Stack {
         "application/json": orderModel
       }
     });
+
+    // GET /orders/events
+    const ordersEventsResource = ordersResource.addResource('events');
+
+    const orderEventsFetchValidator = new apiGateway.RequestValidator(this, 'OrderEventsFetchValidator', {
+      restApi: api,
+      requestValidatorName: 'OrderEventsFetchValidator',
+      validateRequestParameters: true,
+    });
+
+    const orderEventsFetchIntegration = new apiGateway.LambdaIntegration(props.ordersEventsFetchHandler);
+
+    // GET /orders/events?email=samuel@email
+    // GET /orders/events?email=samuel@email&eventType=ORDER_CREATED
+    ordersEventsResource.addMethod('GET', orderEventsFetchIntegration, {
+      requestValidator: orderEventsFetchValidator,
+      requestParameters: {
+        'method.request.querystring.email': true,
+        'method.request.querystring.eventType': false,
+      },
+    });
   }
 
   private createProductService(props: EcommerceApiStackProps, api: apiGateway.RestApi) {
@@ -196,6 +218,4 @@ export class EcommerceApiStack extends cdk.Stack {
     // DELETE /products/{id}
     productIdResource.addMethod('DELETE', productsAdminIntegration);
   }
-
-
 };
