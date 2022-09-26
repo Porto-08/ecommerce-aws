@@ -1,3 +1,4 @@
+import { InvoicesAppLayersStack } from './../lib/invoicesAppLayers-stack';
 import 'source-map-support/register';
 import 'dotenv/config';
 import * as cdk from 'aws-cdk-lib';
@@ -69,6 +70,14 @@ const ecommerceApiStack = new EcommerceApiStack(app, 'EcommerceApi', {
 ecommerceApiStack.addDependency(productsAppStack);
 ecommerceApiStack.addDependency(ordersAppStack);
 
+const invoicesAppLayersStack = new InvoicesAppLayersStack(app, 'InvoicesAppLayers', {
+  env,
+  tags: {
+    cost: 'InvoiceApp',
+    team: 'Porto',
+  }
+});
+
 const invoiceWSApiStack = new InvoiceWSApiStack(app, 'InvoiceWSApi', {
   env,
   tags: {
@@ -76,3 +85,5 @@ const invoiceWSApiStack = new InvoiceWSApiStack(app, 'InvoiceWSApi', {
     team: 'Porto',
   }
 });
+
+invoiceWSApiStack.addDependency(invoicesAppLayersStack, 'InvoiceWSApi depends Layers created by InvoicesAppLayersStack');

@@ -37,6 +37,15 @@
       ],
       "/opt/nodejs/ordersEventsRepositoryLayer": [
         "lambda/orders/layers/ordersEventsRepositoryLayer/nodejs/orderEventRepository"
+      ],
+      "/opt/nodejs/invoiceTransaction": [
+        "lambda/invoices/layers/invoiceTransaction/nodejs/invoiceTransaction"
+      ],
+      "/opt/nodejs/invoiceRepository": [
+        "lambda/invoices/layers/invoiceRepository/nodejs/invoiceRepository"
+      ],
+      "/opt/nodejs/InvoiceWSConection": [
+        "lambda/invoices/layers/InvoiceWSConection/nodejs/InvoiceWSConection"
       ]
     }
   },
