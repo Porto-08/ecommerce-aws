@@ -3,6 +3,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda
 import { ApiGatewayManagementApi, DynamoDB, S3 } from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import * as AWSXRay from 'aws-xray-sdk';
+import { InvoiceWsService } from '/opt/nodejs/InvoiceWSConection';
 
 
 AWSXRay.captureAWS(require('aws-sdk'));
@@ -18,6 +19,7 @@ const apiGwManagementApi = new ApiGatewayManagementApi({
 });
 
 const invoiceTransationRepository = new InvoiceTransationRepository(ddbClient, invoicesDdb);
+const invoiceWsService = new InvoiceWsService(apiGwManagementApi);
 
 export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
   // TODO - to be removed
@@ -55,9 +57,18 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
   await invoiceTransationRepository.createInvoiceTransaction(invoiceTransaction)
 
   // Send URL to client
+  const data = JSON.stringify({
+    url: signedUrlPut,
+    expires,
+    transactionId: key,
+  });
+
+  const result = await invoiceWsService.sendData(connectionId, data);
 
   return {
     statusCode: 200,
-    body: 'Hello from Lambda',
+    body: JSON.stringify({
+      result,
+    }),
   }
 }
