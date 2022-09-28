@@ -38,4 +38,43 @@ export class InvoiceTransationRepository {
 
     return invoiceTransaction;
   }
+
+  async getInvoiceTransaction(key: string): Promise<InvoiceTransaction> {
+    const transaction = await this.ddbClient.get({
+      TableName: this.invoiceTransactionDdb,
+      Key: {
+        pk: '#transaction',
+        sk: key,
+      }
+    }).promise();
+
+    if (!transaction.Item) {
+      throw new Error('Transaction not found');
+    }
+
+    return transaction.Item as InvoiceTransaction;
+  };
+
+  async updateInvoiceTransaction(key: string, status: InvoiceTransactionStatus): Promise<boolean> {
+    try {
+      await this.ddbClient.update({
+        TableName: this.invoiceTransactionDdb,
+        Key: {
+          pk: '#transaction',
+          sk: key,
+        },
+        ConditionExpression: 'attribute_exists(pk)',
+        UpdateExpression: 'set #transationStatus = :status',
+        ExpressionAttributeValues: {
+          ':status': status,
+        }
+      }).promise();
+
+      return true;
+    } catch (ConditionalCheckFailedException) {
+      console.error('Invoice Transaction not found');
+
+      return false;
+    }
+  }
 }

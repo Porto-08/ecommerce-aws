@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ssm from "aws-cdk-lib/aws-ssm"
+import { Construct } from 'constructs';
 
 export class InvoicesAppLayersStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -24,7 +24,7 @@ export class InvoicesAppLayersStack extends cdk.Stack {
     const invoiceRepository = new lambda.LayerVersion(this, 'InvoiceRepository', {
       code: lambda.Code.fromAsset('lambda/invoices/layers/invoiceRepository'),
       compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
-      layerVersionName: 'InvoiceRepository',
+      layerVersionName: 'InvoiceRepositoryLayer',
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     })
 
@@ -35,9 +35,9 @@ export class InvoicesAppLayersStack extends cdk.Stack {
 
     // Invoice Websocket API Layer
     const invoiceWSConectionLayer = new lambda.LayerVersion(this, 'InvoiceWSConectionLayer', {
-      code: lambda.Code.fromAsset('lambda/invoices/layers/InvoiceWSConection'),
+      code: lambda.Code.fromAsset('lambda/invoices/layers/invoiceWSConection'),
       compatibleRuntimes: [lambda.Runtime.NODEJS_16_X],
-      layerVersionName: 'InvoiceWSConection',
+      layerVersionName: 'InvoiceWSConectionLayer',
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     })
 
