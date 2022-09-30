@@ -41,6 +41,7 @@ export class InvoiceWSApiStack extends cdk.Stack {
       writeCapacity: 1,
       timeToLiveAttribute: 'ttl',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
     });
 
 
@@ -55,8 +56,6 @@ export class InvoiceWSApiStack extends cdk.Stack {
         },
       ],
     });
-
-
 
     // websockect connection handler
     const connectionHandler = new lambdaNodeJs.NodejsFunction(this, 'InvoiceConnectionFunction', {
@@ -140,7 +139,6 @@ export class InvoiceWSApiStack extends cdk.Stack {
         }
       }
     });
-
 
     const invoicesBucketPutObjectPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,

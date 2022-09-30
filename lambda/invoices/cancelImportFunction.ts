@@ -37,6 +37,8 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
         invoiceWsService.sendInvoiceStatus(transactionId, connectionId, InvoiceTransactionStatus.CANCELED),
         invoiceTransationRepository.updateInvoiceTransaction(transactionId, InvoiceTransactionStatus.CANCELED),
       ]);
+
+      invoiceWsService.disconnetClient(invoiceTransaction.connectionId);
     } else {
       // Send the current status to the client and log the message
       await invoiceWsService.sendInvoiceStatus(transactionId, connectionId, invoiceTransaction.transationStatus);
