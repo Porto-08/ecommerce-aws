@@ -1,0 +1,7 @@
+{
+	"customerName": "samuelalcala2001@outlook.com",
+	"invoiceNumber": "ABC-123",
+	"totalValue": 750.00,
+	"productId": "1238979312-1298327112",
+	"quantity": 2
+}

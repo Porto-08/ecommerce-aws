@@ -56,7 +56,16 @@ async function processRecord(record: S3EventRecord): Promise<void> {
 
     const invoice = JSON.parse(object.Body!.toString('utf-8')) as InvoiceFile;
 
-    console.log(`${invoice}`);
+    if (invoice.invoiceNumber.length < 5) {
+      await Promise.all([
+        invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, InvoiceTransactionStatus.NOT_VALID_INVOICE_NUMBER),
+        invoiceTransationRepository.updateInvoiceTransaction(key, InvoiceTransactionStatus.NOT_VALID_INVOICE_NUMBER),
+      ]);
+
+      invoiceWsService.disconnetClient(invoiceTransaction.connectionId);
+
+      return;
+    }
 
     const createInvoicePromise = invoiceRepository.create({
       pk: `#invoice_${invoice.customerName}`,
