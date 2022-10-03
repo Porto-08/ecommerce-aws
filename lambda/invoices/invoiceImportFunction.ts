@@ -1,8 +1,6 @@
-import { InvoiceTransaction, InvoiceTransactionStatus } from './../../cdk.out/asset.a08b38bad95d34d991433c6ac3d7e30dc08e87ce6aedf460473a525e05d46416/nodejs/invoiceTransaction';
-import { InvoiceTransationRepository } from '/opt/nodejs/invoiceTransaction';
+import { InvoiceTransactionStatus, InvoiceTransationRepository } from '/opt/nodejs/invoiceTransaction';
 import { Context, S3Event, S3EventRecord } from 'aws-lambda';
 import { ApiGatewayManagementApi, DynamoDB, S3 } from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
 import * as AWSXRay from 'aws-xray-sdk';
 import { InvoiceWsService } from '/opt/nodejs/InvoiceWSConection';
 import { InvoiceFile, InvoiceRepository } from '/opt/nodejs/invoiceRepository';
@@ -82,6 +80,6 @@ async function processRecord(record: S3EventRecord): Promise<void> {
 
     await Promise.all([createInvoicePromise, deleteObjectPromise, updateInvoicePromise, sendStatusPromise]);
   } catch (error) {
-    console.log((<Error>error).message);
+    console.log(error);
   }
 }

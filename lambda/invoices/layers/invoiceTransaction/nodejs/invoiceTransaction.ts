@@ -64,7 +64,7 @@ export class InvoiceTransationRepository {
           sk: key,
         },
         ConditionExpression: 'attribute_exists(pk)',
-        UpdateExpression: 'set #transationStatus = :status',
+        UpdateExpression: 'set transationStatus = :status',
         ExpressionAttributeValues: {
           ':status': status,
         }
@@ -72,8 +72,7 @@ export class InvoiceTransationRepository {
 
       return true;
     } catch (ConditionalCheckFailedException) {
-      console.error('Invoice Transaction not found');
-
+      console.error(ConditionalCheckFailedException);
       return false;
     }
   }
