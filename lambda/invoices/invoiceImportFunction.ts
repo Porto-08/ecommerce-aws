@@ -89,6 +89,8 @@ async function processRecord(record: S3EventRecord): Promise<void> {
     const sendStatusPromise = invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, InvoiceTransactionStatus.PROCESSED);
 
     await Promise.all([createInvoicePromise, deleteObjectPromise, updateInvoicePromise, sendStatusPromise]);
+
+    invoiceWsService.disconnetClient(invoiceTransaction.connectionId);
   } catch (error) {
     console.log((<Error>error).message);
   }
