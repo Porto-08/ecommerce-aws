@@ -27,20 +27,29 @@ export async function handler(event: DynamoDBStreamEvent, context: Context): Pro
         console.log('Invoice transaction event received')
       } else {
         console.log('Invoice event received')
-
         promises.push(createEvent(record.dynamodb!.NewImage!, "INVOICE_CREATED"))
+
       }
-
-
     } else if (record.eventName === "MODIFY") {
-      // TODO
+      console.log('Modify event')
+
+      if (record.dynamodb!.NewImage!.pk.S!.startsWith('#transaction')) {
+        console.log('Invoice transaction event received')
+      } else {
+        console.log('Invoice event received')
+        promises.push(createEvent(record.dynamodb!.NewImage!, "INVOICE_CREATED"))
+
+      }
     } else if (record.eventName === "REMOVE") {
+      console.log('Remove event')
       // TODO
     }
   })
 
 
   await Promise.all(promises)
+
+  return;
 };
 
 async function createEvent(invoiceImage: { [key: string]: AttributeValue }, eventType: string) {
@@ -57,8 +66,9 @@ async function createEvent(invoiceImage: { [key: string]: AttributeValue }, even
       createdAt: timestamp,
       eventType,
       info: {
-        transaction: invoiceImage.trasctionId.S,
-        productId: invoiceImage.productId.N,
+        transaction: invoiceImage.transactionId.S,
+        productId: invoiceImage.productId.S,
+        quantity: invoiceImage.quantity.N
       },
     },
   }).promise()
