@@ -5,7 +5,6 @@ import * as AWSXRay from 'aws-xray-sdk';
 
 AWSXRay.captureAWS(require('aws-sdk'));
 
-
 const eventsDdb = process.env.EVENTS_DDB!;
 const invoiceWsApiEndpoint = process.env.INVOICE_WSAPI_ENDPOINT!;
 
@@ -41,16 +40,35 @@ export async function handler(event: DynamoDBStreamEvent, context: Context): Pro
 
       }
     } else if (record.eventName === "REMOVE") {
-      console.log('Remove event')
-      // TODO
+      if (record.dynamodb!.OldImage!.pk.S === "#transaction") {
+        console.log('Invoice Transaction event received')
+        promises.push(processExpiredTransaction(record.dynamodb!.OldImage!))
+      }
     }
   })
-
 
   await Promise.all(promises)
 
   return;
 };
+
+async function processExpiredTransaction(invoiceTransactionImage: { [key: string]: AttributeValue }) {
+  const transactionId = invoiceTransactionImage.sk.S!
+  const connectionId = invoiceTransactionImage.connectionId.S!
+  const invoiceStatus = invoiceTransactionImage.transactionStatus.S!
+
+  console.log(`TransactionId: ${transactionId} - ConnectionId: ${connectionId}`)
+
+  if (invoiceStatus === "INVOICE_PROCESSED") {
+    console.log('Invoice processed')
+  } else {
+    console.log(`Invoice import failed - Status: ${invoiceStatus}`)
+
+    await invoiceWsService.sendInvoiceStatus(transactionId, connectionId, "TIMEOUT");
+
+    await invoiceWsService.disconnetClient(connectionId);
+  }
+}
 
 async function createEvent(invoiceImage: { [key: string]: AttributeValue }, eventType: string) {
   const timestamp = Date.now();
