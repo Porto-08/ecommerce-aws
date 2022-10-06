@@ -38,15 +38,15 @@ async function processRecord(record: S3EventRecord): Promise<void> {
   try {
     const invoiceTransaction = await invoiceTransationRepository.getInvoiceTransaction(key);
 
-    if (invoiceTransaction.transationStatus === InvoiceTransactionStatus.GENERATED) {
+    if (invoiceTransaction.transactionStatus === InvoiceTransactionStatus.GENERATED) {
       await Promise.all([
         invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, InvoiceTransactionStatus.RECEIVED),
         invoiceTransationRepository.updateInvoiceTransaction(key, InvoiceTransactionStatus.RECEIVED),
       ]);
     } else {
-      await invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, invoiceTransaction.transationStatus);
+      await invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, invoiceTransaction.transactionStatus);
 
-      console.log(`Invoice ${key} is already ${invoiceTransaction.transationStatus}`);
+      console.log(`Invoice ${key} is already ${invoiceTransaction.transactionStatus}`);
 
       return;
     }

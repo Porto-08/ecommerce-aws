@@ -51,7 +51,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
     expiresIn: expires,
     connectionId,
     endpoint: invoicesWSApiEndpoint,
-    transationStatus: InvoiceTransactionStatus.GENERATED,
+    transactionStatus: InvoiceTransactionStatus.GENERATED,
   }
 
   await invoiceTransationRepository.createInvoiceTransaction(invoiceTransaction)

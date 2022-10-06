@@ -19,7 +19,7 @@ export interface InvoiceTransaction {
   expiresIn: number;
   connectionId: string;
   endpoint: string;
-  transationStatus: InvoiceTransactionStatus;
+  transactionStatus: InvoiceTransactionStatus;
 }
 
 export class InvoiceTransationRepository {
@@ -65,7 +65,7 @@ export class InvoiceTransationRepository {
           sk: key,
         },
         ConditionExpression: 'attribute_exists(pk)',
-        UpdateExpression: 'set transationStatus = :status',
+        UpdateExpression: 'set transactionStatus = :status',
         ExpressionAttributeValues: {
           ':status': status,
         }

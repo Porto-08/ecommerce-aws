@@ -94,19 +94,21 @@ async function createEvent(invoiceImage: { [key: string]: AttributeValue }, even
   const timestamp = Date.now();
   const ttl = Math.round(timestamp / 1000 + 60 * 60);
 
+  console.log(invoiceImage)
+
   await ddbClient.put({
     TableName: eventsDdb,
     Item: {
-      pk: `#invoice_${invoiceImage.sk.S}`,
+      pk: `#invoice_${invoiceImage.sk.S!}`,
       sk: `${eventType}#${timestamp}`,
       ttl,
       email: invoiceImage.pk.S!.split('_')[1],
       createdAt: timestamp,
       eventType,
       info: {
-        transaction: invoiceImage.transactionId.S,
-        productId: invoiceImage.productId.S,
-        quantity: invoiceImage.quantity.N
+        transaction: invoiceImage.transactionId.S!,
+        productId: invoiceImage.productId.S!,
+        quantity: invoiceImage.quantity.N!
       },
     },
   }).promise()

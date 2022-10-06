@@ -30,7 +30,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
   try {
     const invoiceTransaction = await invoiceTransationRepository.getInvoiceTransaction(transactionId);
 
-    if (invoiceTransaction.transationStatus === InvoiceTransactionStatus.GENERATED) {
+    if (invoiceTransaction.transactionStatus === InvoiceTransactionStatus.GENERATED) {
 
       // Update the transaction status to Cancelled
       await Promise.all([
@@ -41,9 +41,9 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       invoiceWsService.disconnetClient(invoiceTransaction.connectionId);
     } else {
       // Send the current status to the client and log the message
-      await invoiceWsService.sendInvoiceStatus(transactionId, connectionId, invoiceTransaction.transationStatus);
+      await invoiceWsService.sendInvoiceStatus(transactionId, connectionId, invoiceTransaction.transactionStatus);
 
-      console.error(`Invoice ${transactionId} is already ${invoiceTransaction.transationStatus}, Can't cancel`);
+      console.error(`Invoice ${transactionId} is already ${invoiceTransaction.transactionStatus}, Can't cancel`);
     }
   } catch (error) {
     // Send the error to the client
