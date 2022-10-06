@@ -9,6 +9,7 @@ import { EventsDdbStack } from '../lib/eventsDdb-stack';
 import { OrdersAppLayersStack } from "../lib/ordersAppLayers-stack";
 import { OrdersAppStack } from "../lib/ordersApp-stack";
 import { InvoiceWSApiStack } from '../lib/invoiceWSApi-stack';
+import { AuditEventBusStack } from 'lib/auditEventBus-stack';
 
 const app = new cdk.App();
 
@@ -21,6 +22,11 @@ const tags = {
   cost: 'ECommerce',
   team: 'Porto',
 };
+
+const auditEventBusStack = new AuditEventBusStack(app, 'AuditEventBusStack', {
+  env,
+  tags,
+})
 
 const eventsDdbStack = new EventsDdbStack(app, 'EventsDdbStack', {
   env,
@@ -52,10 +58,12 @@ const ordersAppStack = new OrdersAppStack(app, 'OrdersApp', {
   tags,
   productsDdb: productsAppStack.productsDdb,
   eventsDdb: eventsDdbStack.table,
+  auditBus: auditEventBusStack.bus
 });
 
 ordersAppStack.addDependency(ordersAppLayersStack, 'OrdersApp depends on OrdersAppLayers');
 ordersAppStack.addDependency(productsAppStack, 'ProductsApp');
+ordersAppStack.addDependency(auditEventBusStack)
 
 
 const ecommerceApiStack = new EcommerceApiStack(app, 'EcommerceApi', {
@@ -79,13 +87,15 @@ const invoicesAppLayersStack = new InvoicesAppLayersStack(app, 'InvoicesAppLayer
 });
 
 const invoiceWSApiStack = new InvoiceWSApiStack(app, 'InvoiceWSApi', {
-  eventsDdb: eventsDdbStack.table,
   env,
   tags: {
     cost: 'InvoiceApp',
     team: 'Porto',
   },
+  eventsDdb: eventsDdbStack.table,
+  auditBus: auditEventBusStack.bus,
 });
 
 invoiceWSApiStack.addDependency(invoicesAppLayersStack, 'InvoiceWSApi depends Layers created by InvoicesAppLayersStack');
 invoiceWSApiStack.addDependency(eventsDdbStack)
+invoiceWSApiStack.addDependency(auditEventBusStack)

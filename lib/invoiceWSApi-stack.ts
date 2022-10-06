@@ -10,10 +10,12 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
+import * as events from 'aws-cdk-lib/aws-events'
 import { Construct } from 'constructs';
 
 interface InvoiceWsApiStackprops extends cdk.StackProps {
   eventsDdb: dynamodb.Table;
+  auditBus: events.EventBus;
 }
 
 export class InvoiceWSApiStack extends cdk.Stack {
@@ -172,6 +174,7 @@ export class InvoiceWSApiStack extends cdk.Stack {
       environment: {
         INVOICE_DDB: invoiceDdb.tableName,
         INVOICE_WSAPI_ENDPOINT: wsAPiEndpoint,
+        AUDIT_BUS_NAME: props.auditBus.eventBusName
       },
       layers: [invoiceWSConectionLayer, invoiceTransactionLayer, invoiceRepositoryLayer],
     });
@@ -188,6 +191,7 @@ export class InvoiceWSApiStack extends cdk.Stack {
     invoiceImportHandler.addToRolePolicy(invoicesBucketGetDeleteObjectPolicy);
     bucket.addEventNotification(s3.EventType.OBJECT_CREATED_PUT, new s3n.LambdaDestination(invoiceImportHandler));
     webSocketApi.grantManageConnections(invoiceImportHandler);
+    props.auditBus.grantPutEventsTo(invoiceImportHandler)
 
     // Cancel import handler
     const cancelImportHandler = new lambdaNodeJs.NodejsFunction(this, 'CancelImportFunction', {
@@ -246,7 +250,8 @@ export class InvoiceWSApiStack extends cdk.Stack {
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         EVENTS_DDB: props.eventsDdb.tableName,
-        INVOICE_WSAPI_ENDPOINT: wsAPiEndpoint
+        INVOICE_WSAPI_ENDPOINT: wsAPiEndpoint,
+        AUDIT_BUS_NAME: props.auditBus.eventBusName
       },
       layers: [invoiceWSConectionLayer],
     });
@@ -264,6 +269,7 @@ export class InvoiceWSApiStack extends cdk.Stack {
 
     invoiceEventsHandler.addToRolePolicy(invoiceEventsPolicys);
     webSocketApi.grantManageConnections(invoiceEventsHandler);
+    props.auditBus.grantPutEventsTo(invoiceEventsHandler)
 
     const invoiceEventsDlq = new sqs.Queue(this, 'InvoiceEventsDlq', {
       queueName: 'invoice-events-dlq',

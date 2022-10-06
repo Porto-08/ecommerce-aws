@@ -1,6 +1,6 @@
 import { InvoiceTransactionStatus, InvoiceTransationRepository } from '/opt/nodejs/invoiceTransaction';
 import { Context, S3Event, S3EventRecord } from 'aws-lambda';
-import { ApiGatewayManagementApi, DynamoDB, S3 } from 'aws-sdk';
+import { ApiGatewayManagementApi, DynamoDB, S3, EventBridge } from 'aws-sdk';
 import * as AWSXRay from 'aws-xray-sdk';
 import { InvoiceWsService } from '/opt/nodejs/InvoiceWSConection';
 import { InvoiceFile, InvoiceRepository } from '/opt/nodejs/invoiceRepository';
@@ -9,6 +9,7 @@ AWSXRay.captureAWS(require('aws-sdk'));
 
 const invoicesDdb = process.env.INVOICE_DDB!;
 const invoicesWSApiEndpoint = process.env.INVOICE_WSAPI_ENDPOINT!.substring(6);
+const auditBusName = process.env.AUDIT_BUS_NAME!
 
 const s3Client = new S3();
 const ddbClient = new DynamoDB.DocumentClient();
@@ -19,6 +20,7 @@ const apiGwManagementApi = new ApiGatewayManagementApi({
 const invoiceTransationRepository = new InvoiceTransationRepository(ddbClient, invoicesDdb);
 const invoiceWsService = new InvoiceWsService(apiGwManagementApi);
 const invoiceRepository = new InvoiceRepository(ddbClient, invoicesDdb);
+const eventBridgeClient = new EventBridge()
 
 export async function handler(event: S3Event, context: Context): Promise<void> {
   const promises: Promise<void>[] = [];
@@ -57,9 +59,29 @@ async function processRecord(record: S3EventRecord): Promise<void> {
     const invoice = JSON.parse(object.Body!.toString('utf-8')) as InvoiceFile;
 
     if (invoice.invoiceNumber.length < 5) {
+      const putEventPromise = eventBridgeClient.putEvents({
+        Entries: [
+          {
+            Source: 'app.invoice',
+            DetailType: 'invoice',
+            EventBusName: auditBusName,
+            Detail: JSON.stringify({
+              errorDetail: "FAILED_NO_INVOICE_NUMBER",
+              info: {
+                invoiceKey: key,
+                customerName: invoice.customerName,
+              }
+            }),
+            Time: new Date(),
+
+          },
+        ]
+      }).promise()
+
       await Promise.all([
         invoiceWsService.sendInvoiceStatus(key, invoiceTransaction.connectionId, InvoiceTransactionStatus.NOT_VALID_INVOICE_NUMBER),
         invoiceTransationRepository.updateInvoiceTransaction(key, InvoiceTransactionStatus.NOT_VALID_INVOICE_NUMBER),
+        putEventPromise,
       ]);
 
       invoiceWsService.disconnetClient(invoiceTransaction.connectionId);

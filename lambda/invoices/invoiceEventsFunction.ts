@@ -1,5 +1,5 @@
 import { Context, DynamoDBStreamEvent, AttributeValue } from 'aws-lambda';
-import { ApiGatewayManagementApi, DynamoDB } from 'aws-sdk';
+import { ApiGatewayManagementApi, DynamoDB, EventBridge } from 'aws-sdk';
 import { InvoiceWsService } from '/opt/nodejs/InvoiceWSConection';
 import * as AWSXRay from 'aws-xray-sdk';
 
@@ -7,11 +7,14 @@ AWSXRay.captureAWS(require('aws-sdk'));
 
 const eventsDdb = process.env.EVENTS_DDB!;
 const invoiceWsApiEndpoint = process.env.INVOICE_WSAPI_ENDPOINT!;
+const auditBusName = process.env.AUDIT_BUS_NAME!
+
 
 const ddbClient = new DynamoDB.DocumentClient();
 const apiGwManagementApi = new ApiGatewayManagementApi({
   endpoint: invoiceWsApiEndpoint,
 });
+const eventBridgeClient = new EventBridge()
 
 const invoiceWsService = new InvoiceWsService(apiGwManagementApi)
 
@@ -42,6 +45,7 @@ export async function handler(event: DynamoDBStreamEvent, context: Context): Pro
     } else if (record.eventName === "REMOVE") {
       if (record.dynamodb!.OldImage!.pk.S === "#transaction") {
         console.log('Invoice Transaction event received')
+
         promises.push(processExpiredTransaction(record.dynamodb!.OldImage!))
       }
     }
@@ -64,7 +68,23 @@ async function processExpiredTransaction(invoiceTransactionImage: { [key: string
   } else {
     console.log(`Invoice import failed - Status: ${invoiceStatus}`)
 
-    await invoiceWsService.sendInvoiceStatus(transactionId, connectionId, "TIMEOUT");
+    const putEventPromise = eventBridgeClient.putEvents({
+      Entries: [
+        {
+          Source: 'app.invoice',
+          DetailType: 'invoice',
+          EventBusName: auditBusName,
+          Detail: JSON.stringify({
+            errorDetail: "TIMEOUT",
+          }),
+          Time: new Date(),
+        },
+      ]
+    }).promise()
+
+    const sendStatusPromises = invoiceWsService.sendInvoiceStatus(transactionId, connectionId, "TIMEOUT");
+
+    await Promise.all([putEventPromise, sendStatusPromises]);
 
     await invoiceWsService.disconnetClient(connectionId);
   }
