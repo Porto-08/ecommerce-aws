@@ -10,6 +10,9 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as events from 'aws-cdk-lib/aws-events'
+import * as logs from 'aws-cdk-lib/aws-logs'
+import * as cw from 'aws-cdk-lib/aws-cloudwatch'
+import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions'
 
 interface OrdersAppStackProps extends cdk.StackProps {
   productsDdb: dynamodb.Table;
@@ -238,5 +241,38 @@ export class OrdersAppStack extends cdk.Stack {
 
     this.ordersEventsFetchHandler.addToRolePolicy(eventsFetchDdbReadPolicy);
 
+    // Order CloudWatch Alarm
+    // Metric
+    const productNotFoundMetricFilter = this.ordersHandler.logGroup.addMetricFilter('ProductNotFoundMetric', {
+      metricName: 'OrderWithNonValidProduct',
+      metricNamespace: "ProductNotFound",
+      filterPattern: logs.FilterPattern.literal('Some product was not found')
+    });
+
+    // Alarm
+    const productNotFoundAlarm = productNotFoundMetricFilter
+      .metric()
+      .with({
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(2),
+      })
+      .createAlarm(this, 'ProductNotFoundAlarm', {
+        alarmName: 'OrderWithNonValidProduct',
+        alarmDescription: 'Some product was not found while create a new order.',
+        evaluationPeriods: 1,
+        threshold: 2,
+        actionsEnabled: true,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+      });
+
+
+    // Action
+    const orderAlarmTopic = new sns.Topic(this, 'OrderAlarmTopic', {
+      displayName: 'Order alarms topic',
+      topicName: 'order-alarms',
+    })
+
+    orderAlarmTopic.addSubscription(new subscriptions.EmailSubscription("samuelalcala2001@outlook.com"))
+    productNotFoundAlarm.addAlarmAction(new cw_actions.SnsAction(orderAlarmTopic))
   };
 };
