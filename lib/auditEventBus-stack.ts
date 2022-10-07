@@ -117,19 +117,36 @@ export class AuditEventBusStack extends cdk.Stack {
 
     timeoutImportInvoiceRule.addTarget(new targets.SqsQueue(invoiceImportTimeoutQueue))
 
-    // Metric
+    // Number Of Messages Metric
     const numberOfMessagesMetric = invoiceImportTimeoutQueue.metricApproximateNumberOfMessagesVisible({
       period: cdk.Duration.minutes(2),
       statistic: "Sum",
     });
 
-    // Alarm
+    // Number Of Messages Alarm
     numberOfMessagesMetric.createAlarm(this, "InvoiceImportTimeoutAlarm", {
       alarmName: "InvoiceImportTimeout",
       actionsEnabled: false,
       evaluationPeriods: 1,
       threshold: 5,
       comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+    });
+
+
+
+    // Age of message Metric
+    const ageOfMessageMetric = invoiceImportTimeoutQueue.metricApproximateAgeOfOldestMessage({
+      period: cdk.Duration.minutes(2),
+      statistic: 'Maximum',
+      unit: cw.Unit.SECONDS,
+    });
+
+    ageOfMessageMetric.createAlarm(this, 'AgeOfMessageInQueue', {
+      alarmName: 'AgeOfMessageInQueue',
+      actionsEnabled: false,
+      evaluationPeriods: 1,
+      threshold: 60,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
     });
   };
 };
