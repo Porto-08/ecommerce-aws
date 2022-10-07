@@ -242,14 +242,14 @@ export class OrdersAppStack extends cdk.Stack {
     this.ordersEventsFetchHandler.addToRolePolicy(eventsFetchDdbReadPolicy);
 
     // Order CloudWatch Alarm
-    // Metric
+    // Product Not Found Metric Filter
     const productNotFoundMetricFilter = this.ordersHandler.logGroup.addMetricFilter('ProductNotFoundMetric', {
       metricName: 'OrderWithNonValidProduct',
       metricNamespace: "ProductNotFound",
       filterPattern: logs.FilterPattern.literal('Some product was not found')
     });
 
-    // Alarm
+    // Product Not Found Alarm
     const productNotFoundAlarm = productNotFoundMetricFilter
       .metric()
       .with({
@@ -266,7 +266,7 @@ export class OrdersAppStack extends cdk.Stack {
       });
 
 
-    // Action
+    // orderAlarmTopic Action
     const orderAlarmTopic = new sns.Topic(this, 'OrderAlarmTopic', {
       displayName: 'Order alarms topic',
       topicName: 'order-alarms',
@@ -274,5 +274,22 @@ export class OrdersAppStack extends cdk.Stack {
 
     orderAlarmTopic.addSubscription(new subscriptions.EmailSubscription("samuelalcala2001@outlook.com"))
     productNotFoundAlarm.addAlarmAction(new cw_actions.SnsAction(orderAlarmTopic))
+
+
+    // Write Throttle Events Metric
+    const writeThrottleEventsMetric = ordersDdb.metric('WriteThrottleEvents', {
+      period: cdk.Duration.minutes(2),
+      statistic: "SampleCount",
+      unit: cw.Unit.COUNT
+    });
+
+    writeThrottleEventsMetric.createAlarm(this, "WriteThrottleEventsAlarm", {
+      alarmName: 'WriteThrottle',
+      actionsEnabled: false,
+      evaluationPeriods: 1,
+      threshold: 10,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cw.TreatMissingData.NOT_BREACHING,
+    });
   };
 };
