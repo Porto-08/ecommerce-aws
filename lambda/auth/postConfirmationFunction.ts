@@ -4,4 +4,4 @@ export async function handler(event: PostConfirmationTriggerEvent, context: Cont
   console.log(event);
 
   callback(null, event)
-}
+} 
