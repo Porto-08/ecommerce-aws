@@ -4,6 +4,7 @@ import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
 import * as cwlogs from 'aws-cdk-lib/aws-logs'
 import * as cognito from "aws-cdk-lib/aws-cognito"
 import * as lambda from 'aws-cdk-lib/aws-lambda'
+import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs'
 
 interface EcommerceApiStackProps extends cdk.StackProps {
@@ -47,6 +48,18 @@ export class EcommerceApiStack extends cdk.Stack {
     // ----- Cognito -----
     this.createCognitoAuth();
 
+    const adminUserPolicyStatement = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['cognito-idp:AdminGetUser'],
+      resources: [this.adminPool.userPoolArn]
+    });
+
+    const adminUserPolicy = new iam.Policy(this, 'AdminGetUserPolicy', {
+      statements: [adminUserPolicyStatement]
+    });
+
+    adminUserPolicy.attachToRole(<iam.Role>props.productsAdminHandler.role)
+
     // ----- Products -----
     this.createProductService(props, api);
 
@@ -84,8 +97,6 @@ export class EcommerceApiStack extends cdk.Stack {
       tracing: lambda.Tracing.ACTIVE,
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
-
-
 
     // cognito customer UserPool
     this.customerPool = new cognito.UserPool(this, "CustomerPool", {
@@ -128,10 +139,6 @@ export class EcommerceApiStack extends cdk.Stack {
 
     // Cognito admin UserPool 
     this.adminPool = new cognito.UserPool(this, "AdminPool", {
-      lambdaTriggers: {
-        postConfirmation: postConfirmationHandler,
-        preAuthentication: preAuthenticationHandler,
-      },
       userPoolName: "AdminPool",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       selfSignUpEnabled: false,
@@ -349,13 +356,13 @@ export class EcommerceApiStack extends cdk.Stack {
     const productFetchWebMobileIntegrationOption: cdk.aws_apigateway.MethodOptions = {
       authorizer: this.productAuthorizer,
       authorizationType: apiGateway.AuthorizationType.COGNITO,
-      authorizationScopes: ['customer/web', 'customer/mobile']
+      authorizationScopes: ['customer/web', 'customer/mobile', 'admin/web']
     }
 
     const productFetchMobileIntegrationOption: cdk.aws_apigateway.MethodOptions = {
       authorizer: this.productAuthorizer,
       authorizationType: apiGateway.AuthorizationType.COGNITO,
-      authorizationScopes: ['customer/web']
+      authorizationScopes: ['customer/web', 'admin/web']
     }
 
     // GET /products

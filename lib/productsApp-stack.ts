@@ -42,6 +42,11 @@ export class ProductsAppStack extends cdk.Stack {
     const productEventsLayerArn = ssm.StringParameter.valueForStringParameter(this, 'ProductsEventsLayerVersionArn');
     const productEventsLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'ProductsEventsLayerVersionArn', productEventsLayerArn);
 
+    // User Info Layer
+    const authUserInfoLayerArn = ssm.StringParameter.valueForStringParameter(this, 'AuthUserInfoLayerVersionArn');
+    const authUserInfoLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'AuthUserInfoLayerVersionArn', authUserInfoLayerArn);
+
+
     const productsEventsDlq = new sqs.Queue(this, 'ProductEventsDlq', {
       queueName: 'product-events-dlq',
       retentionPeriod: cdk.Duration.days(10),
@@ -97,7 +102,7 @@ export class ProductsAppStack extends cdk.Stack {
       environment: {
         PRODUCTS_DDB: this.productsDdb.tableName,
       },
-      layers: [productsLayer],
+      layers: [productsLayer, authUserInfoLayer],
       tracing: lambda.Tracing.ACTIVE,
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
@@ -123,7 +128,7 @@ export class ProductsAppStack extends cdk.Stack {
         PRODUCTS_DDB: this.productsDdb.tableName,
         PRODUCTS_EVENTS_FUNCTION_NAME: productsEventsHandler.functionName,
       },
-      layers: [productsLayer, productEventsLayer],
+      layers: [productsLayer, productEventsLayer, authUserInfoLayer],
       tracing: lambda.Tracing.ACTIVE,
       insightsVersion: lambda.LambdaInsightsVersion.VERSION_1_0_98_0,
     });
