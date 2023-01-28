@@ -1,14 +1,26 @@
-# Welcome to your CDK TypeScript project
+# Ecommerce Serveless API
+Este projeto é uma simulação de algumas etapas na compra de um Produto via Ecommerce. Realizado para estudos sobre a Arquitetura e Desenvolvimento de aplicações Serveless.
 
-This is a blank project for CDK development with TypeScript.
+# Funcionalidades
+- Gerenciamento de Pedidos;
+- Gerenciamento de Produtos;
+- Envio de E-mails;
+- Geração de notas fiscais (Fakes);
+- Autenticação e autorização de usuário;
+- Monitoramento de Erros e Alertas.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+# Tecnologia Utilizadas
+- AWS Lambda e Lambda Layers
+- AWS SQS e SNS
+- AWS Gateway API (Rest e Websockets)
+- AWS DynamoDB
+- AWS CloudWatch
+- AWS CDK
+- AWS IAM
+- AWS XRay
+- AWS SES
+- AWS S3
+- AWS Cognito
 
-## Useful commands
-
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+## License
+[MIT licensed](LICENSE).
